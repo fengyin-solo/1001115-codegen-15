@@ -4,7 +4,9 @@
 """
 from __future__ import annotations
 
-from typing import Any
+import copy
+from contextlib import contextmanager
+from typing import Any, Iterator
 
 from app.seed import SEED_ROWS
 
@@ -26,6 +28,21 @@ class Store:
             if int(row.get("id", 0)) == entry_id:
                 return row
         return None
+
+    @contextmanager
+    def transaction(self, *modules: str) -> Iterator[None]:
+        """把指定模块的表纳入同一事务：任一环节失败就整体回滚到进入前的快照。
+
+        内存仓库没有真正的 undo 日志，这里用深拷贝快照代替；业务层（如伸缩缝
+        测量回放的整包校验、签认、发布）在 with 块里改动数据，抛错即还原。
+        """
+        snapshot = {name: copy.deepcopy(self.rows(name)) for name in dict.fromkeys(modules)}
+        try:
+            yield
+        except Exception:
+            for name, rows in snapshot.items():
+                self._tables[name] = rows
+            raise
 
     def overview(self) -> dict[str, object]:
         modules: list[dict[str, object]] = []

@@ -7,7 +7,7 @@ from app.store import store
 
 MODULE = "material"
 REQUIRED_FIELDS = ["材料编号", "材料名称", "材料类别"]
-STATUS_ORDER = ["在库", "已领用", "待检测", "不合格"]
+STATUS_ORDER = ["在库", "已领用", "待检测", "不合格", "待采购"]
 ACTION_RULES = {"领用材料": "已领用", "送检材料": "待检测", "退还不合格": "不合格"}
 NEGATIVE_ACTIONS = []
 
