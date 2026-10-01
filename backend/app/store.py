@@ -4,6 +4,9 @@
 """
 from __future__ import annotations
 
+import copy
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 from app.seed import SEED_ROWS
@@ -26,6 +29,21 @@ class Store:
             if int(row.get("id", 0)) == entry_id:
                 return row
         return None
+
+    @contextmanager
+    def transaction(self, *modules: str) -> Iterator[None]:
+        """把指定模块的表整体快照，异常时恢复原状，模拟同一事务里的回滚。
+
+        测量回放工作台的整包校验、签认、发布要绑在一个事务里：任何一步失败，
+        涉及的台账、档案、材料待办都不能留下半截写入。
+        """
+        snapshot = {name: copy.deepcopy(self.rows(name)) for name in modules}
+        try:
+            yield
+        except Exception:
+            for name, rows in snapshot.items():
+                self._tables[name] = rows
+            raise
 
     def overview(self) -> dict[str, object]:
         modules: list[dict[str, object]] = []
